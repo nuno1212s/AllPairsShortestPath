@@ -53,17 +53,13 @@ int main(int argc, char **argv) {
             unsigned int **result = malloc(sizeof(unsigned int) * matrixSize * matrixSize);
             //unsigned int result[matrixSize][matrixSize];
 
-            if (prepareMatrixForAllPairs(matrixSize,  matrix)) {
-                printf("Prepared.\n");
+            if (prepareMatrixForAllPairs(matrixSize, matrix)) {
 
                 if (doAllPairsShortestPaths(matrixSize, matrix, result)) {
-
-                    printf("done pairs\n");
 
                     printMatrix(stdout, matrixSize, result);
 
                 }
-//
             }
 //            if (subdivideMatrix(matrixSize, matrix, numProc, Q, dividedMatrices)) {
 //

@@ -10,8 +10,6 @@
 
 int prepareMatrixForAllPairs(unsigned int matrixSize, unsigned int (*matrix)[matrixSize]) {
 
-    printf("prepping...\n");
-
     for (int i = 0; i < matrixSize; i++) {
         for (int j = 0; j < matrixSize; j++) {
 
@@ -60,7 +58,7 @@ int doAllPairsShortestPaths(unsigned int matrixSize, unsigned int (*matrixW)[mat
         m *= 2;
 
         //Move the matrixD (D^2m) back to matrixW
-        memcpy(matrixW, matrixD, sizeof(int) * matrixSize * matrixSize);
+        memcpy(matrixW, matrixD, sizeof(unsigned int) * matrixSize * matrixSize);
     }
 
     return 1;
