@@ -14,7 +14,8 @@ int prepareMatrixForAllPairs(unsigned int matrixSize, unsigned int (*matrix)[mat
         for (int j = 0; j < matrixSize; j++) {
 
             if (i != j && matrix[i][j] == 0) {
-                matrix[i][j] = INT_MAX;
+                //Use only INT_MAX so that dik + dkj doesn't surpass the limit of unsigned ints
+                matrix[i][j] = INT_MAX - 1;
             }
 
         }

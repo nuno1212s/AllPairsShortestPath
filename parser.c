@@ -7,11 +7,8 @@ int parseMatrix(FILE *fp, unsigned int matrixSize, unsigned int (*matrix)[matrix
 
         for (int column = 0; column < matrixSize; column++) {
 
-            int num;
+            fscanf(fp, "%d", &matrix[row][column]);
 
-            fscanf(fp, "%d", &num);
-
-            matrix[row][column] = num;
         }
     }
 

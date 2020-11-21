@@ -26,8 +26,8 @@ int doSpecialMatrixMultiply(unsigned int matrixSize, unsigned int (*matrixA)[mat
  * Perform the all pairs shortest paths algorithm
  *
  * @param matrixSize The size of the matrix
- * @param matrixW The weight matrix, after being passed through prepareMatrix
- * @param matrixD The destination matrix.
+ * @param matrixW The weight matrix, after being passed through prepareMatrix (This matrix will be modified)
+ * @param matrixD The result matrix.
  * @return Whether the algorithm was successful
  */
 int doAllPairsShortestPaths(unsigned int matrixSize, unsigned int (*matrixW)[matrixSize],

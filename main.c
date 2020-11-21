@@ -1,6 +1,7 @@
 #include <stdio.h>
 #include <stdlib.h>
 #include "mpi/mpi.h"
+#include "memory.h"
 #include <math.h>
 #include "parser.h"
 #include "foxsalgorithm.h"
@@ -23,14 +24,14 @@ int main(int argc, char **argv) {
 
 //        printf("Reading matrix...\n");
 
-        scanf("%d", &matrixSize);
+        fscanf(fp, "%d", &matrixSize);
 
         if (!verifyArguments(numProc, matrixSize, &Q)) {
 
 //        MPI_Finalize();
 
             fprintf(stderr,
-                    "Failed to initialize the process. The number of processes does not match the size of the matrix.\n");
+                    "Failed to initialize the process. The number of processes does not match the size of the matrix.\n");;
 
             printf("Number of processes: %d . Matrix size: %d .\n", numProc, matrixSize);
 
@@ -41,14 +42,15 @@ int main(int argc, char **argv) {
         //unsigned int matrix[matrixSize][matrixSize];
 
         //Had to change to this, since the larger inputs ran out of stack memory xD
-        unsigned int **matrix = malloc(sizeof (unsigned int) * matrixSize * matrixSize);
-
-        //The divided matrixes
-//        unsigned int dividedMatrices[numProc][matrixSize / Q][matrixSize / Q];
+        unsigned int **matrix = malloc(sizeof(unsigned int) * matrixSize * matrixSize);
 
         if (parseMatrix(fp, matrixSize, matrix)) {
 
             printf("Parsed matrix.\n");
+
+            unsigned int **matrixCopy = malloc(sizeof(unsigned int) * matrixSize * matrixSize);
+
+            memcpy(matrixCopy, matrix, sizeof(unsigned int) * matrixSize * matrixSize);
 
             unsigned int **result = malloc(sizeof(unsigned int) * matrixSize * matrixSize);
             //unsigned int result[matrixSize][matrixSize];
@@ -61,42 +63,31 @@ int main(int argc, char **argv) {
 
                 }
             }
-//            if (subdivideMatrix(matrixSize, matrix, numProc, Q, dividedMatrices)) {
-//
-//                for (int i = 0; i < numProc; i++) {
-//                    printf("Matrix for process %d:\n", i);
-//                    printMatrix(stdout, matrixSize / Q, dividedMatrices[i]);
-//                }
-//
-//            }
+
+            free(result);
+
+            //The divided matrixes
+//        unsigned int dividedMatrices[numProc][matrixSize / Q][matrixSize / Q];
+
+            unsigned int **dividedMatrix = malloc(sizeof(unsigned int) * (matrixSize / Q) * (matrixSize / Q));
+
+            for (int i = 0; i < numProc; i++) {
+                if (subdivideMatrix(matrixSize, matrixCopy, Q, i, dividedMatrix)) {
+
+                    printf("Matrix for process %d:\n", i);
+
+                    printMatrix(stdout, matrixSize / Q, dividedMatrix);
+                }
+
+            }
 
         } else {
             fprintf(stderr, "Failed to parse matrix. \n");
         }
+
+        free(matrix);
     }
 
     return 0;
 }
 
-int verifyArguments(int processCount, int matrixSize, int *Q) {
-
-    int maxQ = floor(sqrt(processCount));
-
-    int possibleProcCount = maxQ * maxQ;
-
-    if (possibleProcCount != processCount) {
-
-        //The number of processes is not a perfect square.
-
-        return 0;
-    }
-
-    if (matrixSize % maxQ == 0) {
-
-        *Q = maxQ;
-
-        return 1;
-    }
-
-    return 0;
-}
