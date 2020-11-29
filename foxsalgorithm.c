@@ -1,20 +1,36 @@
 #include "foxsalgorithm.h"
-#include <stdlib.h>
+#include <memory.h>
+#include <limits.h>
+#include <math.h>
+#include "matrixutil.h"
 #include "parser.h"
-#include "math.h"
 #include "matrix_multiplication.h"
 
 #define REORDER 1
 #define TAG 37
+#define PRINT_RANK 0
 
-static void resetMatrix(unsigned int matrixSize, unsigned int (*toReset)[matrixSize]) {
+int verifyArguments(int processCount, int matrixSize, int *Q) {
 
-    for (int i = 0; i < matrixSize; i++) {
-        for (int j = 0; j < matrixSize; j++) {
-            toReset[i][j] = 0;
-        }
+    int maxQ = floor(sqrt(processCount));
+
+    int possibleProcCount = maxQ * maxQ;
+
+    if (possibleProcCount != processCount) {
+
+        //The number of processes is not a perfect square.
+
+        return 0;
     }
 
+    if (matrixSize % maxQ == 0) {
+
+        *Q = maxQ;
+
+        return 1;
+    }
+
+    return 0;
 }
 
 int setupGrid(MpiInfo *info) {
@@ -77,7 +93,7 @@ int setupDatatype(MpiInfo *info, int matrixSize) {
     int perProcessMatrixSize = (matrixSize / info->Q);
 
     MPI_Type_vector(perProcessMatrixSize, perProcessMatrixSize, perProcessMatrixSize,
-                    MPI_INT32_T, &(info->datatype));
+                    MPI_UINT32_T, &(info->datatype));
 
     //Let MPI know about the new datatype
     MPI_Type_commit(&(info->datatype));
@@ -85,22 +101,24 @@ int setupDatatype(MpiInfo *info, int matrixSize) {
 }
 
 
-void performFox(int matrixSize, MpiInfo *info, unsigned int(*localA)[matrixSize / info->Q],
-                unsigned int (*localB)[matrixSize / info->Q], unsigned int (*localC)[matrixSize / info->Q]) {
+void performFox(int matrixSize, MpiInfo *info, unsigned int *localA,
+                unsigned int *localB, unsigned int *localC) {
 
     unsigned int n_bar = matrixSize / info->Q;
 
     int bcast_root,
-            //We get the remainder of the division to be able to return to the first process in the row/column if
-            //We are the last process in the row/column (Circular shift)
-            source = (info->myRow + 1) % info->Q,
+    //We get the remainder of the division to be able to return to the first process in the row/column if
+    //We are the last process in the row/column (Circular shift)
+    source = (info->myRow + 1) % info->Q,
             dest = (info->myRow + info->Q - 1) % info->Q;
 
     MPI_Status status;
 
-    resetMatrix(n_bar, localC);
+    unsigned int *tempA = NULL;
 
-    unsigned int (*tempA)[n_bar] = malloc(sizeof(unsigned int) * n_bar * n_bar);
+    matrix_alloc(n_bar, &tempA);
+
+    matrix_fill(n_bar, tempA, 0);
 
     for (int step = 0; step < info->Q; step++) {
 
@@ -113,13 +131,41 @@ void performFox(int matrixSize, MpiInfo *info, unsigned int(*localA)[matrixSize 
             //Send the localA matrix to the other processes on our row
             MPI_Bcast(localA, 1, info->datatype, bcast_root, info->rowComm);
 
+            if (info->myRank == PRINT_RANK) {
+                printf("FOX STEP: %d\n", step);
+                printMatrix(stdout, n_bar, localA);
+                printf("Local B: \n");
+                printMatrix(stdout, n_bar, localB);
+                printf("Local C b4:\n");
+                printMatrix(stdout, n_bar, localC);
+            }
+
             doSpecialMatrixMultiply(n_bar, localA, localB, localC);
+
+            if (info->myRank == PRINT_RANK) {
+                printf("Local C\n");
+                printMatrix(stdout, n_bar, localC);
+            }
 
         } else {
             //Send the tempA matrix to the other processes in our row
             MPI_Bcast(tempA, 1, info->datatype, bcast_root, info->rowComm);
 
+            if (info->myRank == PRINT_RANK) {
+                printf("FOX STEP: %d TEMP\n", step);
+                printMatrix(stdout, n_bar, tempA);
+                printf("Local B: \n");
+                printMatrix(stdout, n_bar, localB);
+                printf("Local C b4:\n");
+                printMatrix(stdout, n_bar, localC);
+            }
+
             doSpecialMatrixMultiply(n_bar, tempA, localB, localC);
+
+            if (info->myRank == PRINT_RANK) {
+                printf("Local C\n");
+                printMatrix(stdout, n_bar, localC);
+            }
         }
 
         //Send our local B matrix to the process directly above
@@ -129,28 +175,86 @@ void performFox(int matrixSize, MpiInfo *info, unsigned int(*localA)[matrixSize 
 
     }
 
-    free(tempA);
+    if (info->myRank == PRINT_RANK) {
+        printf("\n \n \n");
+    }
+
+    matrix_free(&tempA);
 
 }
 
-int subdivideMatrix(unsigned int matrixSize, unsigned int (*matrix)[matrixSize],
-                    unsigned int Q,
-                    unsigned int processID,
-                    unsigned int (*matrixDestinations)[matrixSize / Q]) {
 
-    unsigned int perMatrixSize = matrixSize / Q;
+void doAllPairsShortestPathFox(int matrixSize, MpiInfo *info, unsigned int *localA,
+                               unsigned int *localB, unsigned int *localC) {
+    int m = 1;
 
-    //Omega (x) = (x / Q, x mod Q)
-    unsigned int startRow = (processID / Q) * perMatrixSize, endRow = startRow + perMatrixSize,
-            startColumn = (processID % Q) * perMatrixSize, endColumn = startColumn + perMatrixSize;
+    matrix_fill(matrixSize / info->Q, localC, INT_MAX - 1);
 
-    for (unsigned int i = startRow; i < endRow; i++) {
-        for (unsigned int j = startColumn; j < endColumn; j++) {
+    while (m < matrixSize - 1) {
+        if (info->myRank == PRINT_RANK)
+            printf("DOING ITERATION FOR M: %d SIZE %d\n", m, matrixSize - 1);
 
-            matrixDestinations[i - startRow][j - startColumn] = matrix[i][j];
+        performFox(matrixSize, info, localA, localB, localC);
 
+        m *= 2;
+
+        matrix_copy(matrixSize / info->Q, localA, localC);
+        matrix_copy(matrixSize / info->Q, localB, localC);
+    }
+
+}
+
+#define START_ROW(processID, Q, perMatrixSize) ((processID / Q) * perMatrixSize)
+#define START_COLUMN(processID, Q, perMatrixSize) ((processID % Q) * perMatrixSize)
+
+int assembleMatrix(unsigned int matrixSize,
+                   unsigned int Q,
+                   unsigned int processID,
+                   unsigned int (*matrix)[matrixSize / Q],
+                   unsigned int (*destination)[matrixSize]) {
+
+    unsigned int perMatrix = matrixSize / Q;
+
+    int finalStartRow = START_ROW(processID, Q, (matrixSize / Q)),
+            finalStartColumn = START_COLUMN(processID, Q, (matrixSize / Q));
+
+    for (int i = finalStartRow; i < finalStartRow + perMatrix; i++) {
+        for (int j = finalStartColumn; j < finalStartColumn + perMatrix; j++) {
+            destination[i][j] = matrix[i - finalStartRow][j - finalStartColumn];
         }
     }
 
-    return 1;
+}
+
+
+int buildScatterMatrix(unsigned int matrixSize,
+                       unsigned int Q,
+                       unsigned int processes,
+                       unsigned int *originalMatrix,
+                       unsigned int *destinationMatrix) {
+
+    int k = 0;
+
+    unsigned int perMatrixSize = matrixSize / Q;
+
+    for (int proc = 0; proc < processes; proc++) {
+
+//        printf("Matrix for process %d is: \n", proc);
+
+        int row = START_ROW(proc, Q, perMatrixSize),
+                column = START_COLUMN(proc, Q, perMatrixSize);
+
+        for (int i = 0; i < perMatrixSize; i++) {
+            for (int j = 0; j < perMatrixSize; j++) {
+
+                destinationMatrix[k] = originalMatrix[PROJECT(matrixSize, (i + row), (j + column))];
+//                printf("%d ", destinationMatrix[k]);
+
+                k++;
+            }
+
+//            printf("\n");
+        }
+
+    }
 }

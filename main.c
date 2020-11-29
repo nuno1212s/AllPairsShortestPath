@@ -1,34 +1,50 @@
 #include <stdio.h>
 #include <stdlib.h>
+#include <zconf.h>
 #include "mpi/mpi.h"
-#include "memory.h"
-#include <math.h>
 #include "parser.h"
 #include "foxsalgorithm.h"
 #include "matrix_multiplication.h"
+#include "matrixutil.h"
 
-int verifyArguments(int processCount, int matrixSize, int *Q);
+static void resetMatrix(unsigned int matrixSize, unsigned int (*toReset)[matrixSize]) {
+
+    for (int i = 0; i < matrixSize; i++) {
+        for (int j = 0; j < matrixSize; j++) {
+            toReset[i][j] = 0;
+        }
+    }
+
+}
 
 int main(int argc, char **argv) {
 
+
     int matrixSize, numProc = 4, rank = 0, Q;
 
-//    MPI_Init(&argc, &argv);
+    MPI_Init(&argc, &argv);
 
-//    MPI_Comm_size(MPI_COMM_WORLD, &numProc);
+    MPI_Comm_size(MPI_COMM_WORLD, &numProc);
 
-//    MPI_Comm_rank(MPI_COMM_WORLD, &rank);
+    MPI_Comm_rank(MPI_COMM_WORLD, &rank);
+
+    FILE *fp = stdin;
 
     if (rank == 0) {
-        FILE *fp = stdin;
-
-//        printf("Reading matrix...\n");
-
         fscanf(fp, "%d", &matrixSize);
+    }
+
+    MPI_Bcast(&matrixSize, 1, MPI_UINT32_T, 0, MPI_COMM_WORLD);
+
+    unsigned int *dividedMatrix = NULL;
+
+    if (rank == 0) {
+
+        matrix_alloc(matrixSize, &dividedMatrix);
 
         if (!verifyArguments(numProc, matrixSize, &Q)) {
 
-//        MPI_Finalize();
+            MPI_Finalize();
 
             fprintf(stderr,
                     "Failed to initialize the process. The number of processes does not match the size of the matrix.\n");;
@@ -42,51 +58,102 @@ int main(int argc, char **argv) {
         //unsigned int matrix[matrixSize][matrixSize];
 
         //Had to change to this, since the larger inputs ran out of stack memory xD
-        unsigned int **matrix = malloc(sizeof(unsigned int) * matrixSize * matrixSize);
+        unsigned int *matrix = NULL;
+
+        matrix_alloc(matrixSize, &matrix);
 
         if (parseMatrix(fp, matrixSize, matrix)) {
 
+            prepareMatrixForAllPairs(matrixSize, matrix);
+
             printf("Parsed matrix.\n");
 
-            unsigned int **matrixCopy = malloc(sizeof(unsigned int) * matrixSize * matrixSize);
+            unsigned int perProcessMatrixSize = (matrixSize / Q);
 
-            memcpy(matrixCopy, matrix, sizeof(unsigned int) * matrixSize * matrixSize);
+            printf("Initial matrix:\n");
 
-            unsigned int **result = malloc(sizeof(unsigned int) * matrixSize * matrixSize);
-            //unsigned int result[matrixSize][matrixSize];
+            printMatrix(stdout, matrixSize, matrix);
 
-            if (prepareMatrixForAllPairs(matrixSize, matrix)) {
+            buildScatterMatrix(matrixSize, Q, numProc, matrix, dividedMatrix);
 
-                if (doAllPairsShortestPaths(matrixSize, matrix, result)) {
+            printf("Scatter matrix: \n");
 
-                    printMatrix(stdout, matrixSize, result);
+            printMatrix(stdout, matrixSize, dividedMatrix);
 
-                }
-            }
-
-            free(result);
-
-            //The divided matrixes
-//        unsigned int dividedMatrices[numProc][matrixSize / Q][matrixSize / Q];
-
-            unsigned int **dividedMatrix = malloc(sizeof(unsigned int) * (matrixSize / Q) * (matrixSize / Q));
-
-            for (int i = 0; i < numProc; i++) {
-                if (subdivideMatrix(matrixSize, matrixCopy, Q, i, dividedMatrix)) {
-
-                    printf("Matrix for process %d:\n", i);
-
-                    printMatrix(stdout, matrixSize / Q, dividedMatrix);
-                }
-
-            }
 
         } else {
             fprintf(stderr, "Failed to parse matrix. \n");
+
+            exit(EXIT_FAILURE);
         }
 
-        free(matrix);
+        matrix_free(&matrix);
     }
+
+//    if (rank == 0) {
+//        volatile int i = 0;
+//        char hostname[256];
+//        gethostname(hostname, sizeof(hostname));
+//        printf("PID %d on %s ready for attach\n", getpid(), hostname);
+//        fflush(stdout);
+//        while (0 == i)
+//            sleep(5);
+//    }
+
+    MPI_Bcast(&Q, 1, MPI_UINT32_T, 0, MPI_COMM_WORLD);
+
+    MpiInfo info;
+
+    setupGrid(&info);
+
+    setupDatatype(&info, matrixSize);
+
+//    printf("INFO: Q: %d, Process Count: %d, My Row: %d, My Column: %d, My Rank: %d \n", info.Q,
+//           info.processCount, info.myRow, info.myColumn, info.myRank);
+
+    unsigned int *localA = NULL, *localB = NULL, *localC = NULL;
+
+    matrix_alloc(matrixSize / Q, &localA);
+    matrix_alloc(matrixSize / Q, &localB);
+    matrix_alloc(matrixSize / Q, &localC);
+
+    MPI_Scatter(dividedMatrix, 1, info.datatype, localA, 1, info.datatype, 0, info.gridComm);
+
+    matrix_copy(matrixSize / Q, localB, localA);
+
+    if (info.myRank == 0) {
+        printf("Process %d received: \n Local A:\n", rank);
+
+        printMatrix(stdout, matrixSize / Q, localA);
+
+        printf("LocalB: \n");
+
+        printMatrix(stdout, matrixSize / Q, localB);
+    }
+
+    doAllPairsShortestPathFox(matrixSize, &info, localA, localB, localC);
+
+    if (info.myRank == 0) {
+        printf("Process %d ended with: \n", rank);
+
+        printMatrix(stdout, matrixSize / Q, localC);
+        printf("\n");
+    }
+
+    MPI_Gather(localC, 1, info.datatype, dividedMatrix, 1, info.datatype, 0, info.gridComm);
+
+    if (info.myRank == 0) {
+        printf("Final matrix:\n");
+
+        printMatrix(stdout, matrixSize, dividedMatrix);
+    }
+
+    if (dividedMatrix != NULL)
+        free(dividedMatrix);
+
+    free(localA);
+    free(localB);
+    free(localC);
 
     return 0;
 }

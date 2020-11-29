@@ -8,7 +8,7 @@
  * @param matrixResult Where to put the parsed matrix results (This should already be initialized to the needed size)
  * @return Whether the method was successful
  */
-int parseMatrix(FILE *fp, unsigned int matrixSize, unsigned int (*matrix)[matrixSize]);
+int parseMatrix(FILE *fp, unsigned int matrixSize, unsigned int *matrix);
 
 /**
  * Print a matrix
@@ -18,4 +18,4 @@ int parseMatrix(FILE *fp, unsigned int matrixSize, unsigned int (*matrix)[matrix
  * @param matrix The matrix to print
  * @return Whether the method wa successful
  */
-int printMatrix(FILE *fp, unsigned int matrixSize, unsigned int (*matrix)[matrixSize]);
+int printMatrix(FILE *fp, unsigned int matrixSize, unsigned int *matrix);

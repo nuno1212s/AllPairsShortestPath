@@ -46,8 +46,11 @@ int setupDatatype(MpiInfo *info, int matrixSize);
  */
 int verifyArguments(int processCount, int matrixSize, int *Q);
 
-void performFox(int matrixSize, MpiInfo *info, unsigned int(*localA)[matrixSize / info->Q],
-                unsigned int (*localB)[matrixSize / info->Q], unsigned int (*localC)[matrixSize / info->Q]);
+void performFox(int matrixSize, MpiInfo *info, unsigned int *localA,
+                unsigned int *localB, unsigned int *localC);
+
+void doAllPairsShortestPathFox(int matrixSize, MpiInfo *info, unsigned int *localA,
+                               unsigned int *localB, unsigned int *localC);
 
 /**
  * Subdivide the matrix and store the matrix for the process processID in the argument destinationMatrix
@@ -59,7 +62,19 @@ void performFox(int matrixSize, MpiInfo *info, unsigned int(*localA)[matrixSize 
  * @param destinationMatrix Where to put the processes matrix
  * @return
  */
-int subdivideMatrix(unsigned int matrixSize, unsigned int (*matrix)[matrixSize],
-                    unsigned int Q,
-                    unsigned int processID,
-                    unsigned int (*destinationMatrix)[matrixSize / Q]);
+//int subdivideMatrix(unsigned int matrixSize, const unsigned int *matrix,
+//                    unsigned int Q,
+//                    unsigned int processID,
+//                    unsigned int *destinationMatrix);
+
+int assembleMatrix(unsigned int matrixSize,
+                   unsigned int Q,
+                   unsigned int processID,
+                   unsigned int (*matrix)[matrixSize/Q],
+                   unsigned int (*destination)[matrixSize]);
+
+int buildScatterMatrix(unsigned int matrixSize,
+                       unsigned int Q,
+                       unsigned int processes,
+                       unsigned int *originalMatrix,
+                       unsigned int *destinationMatrix);
