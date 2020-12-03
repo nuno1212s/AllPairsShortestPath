@@ -44,7 +44,7 @@ int setupDatatype(MpiInfo *info, int matrixSize);
  * @param Q
  * @return
  */
-int verifyArguments(int processCount, int matrixSize, int *Q);
+int verifyArguments(int processCount, int matrixSize, unsigned int *Q);
 
 void performFox(int matrixSize, MpiInfo *info, unsigned int *localA,
                 unsigned int *localB, unsigned int *localC);
@@ -69,9 +69,9 @@ void doAllPairsShortestPathFox(int matrixSize, MpiInfo *info, unsigned int *loca
 
 int assembleMatrix(unsigned int matrixSize,
                    unsigned int Q,
-                   unsigned int processID,
-                   unsigned int (*matrix)[matrixSize/Q],
-                   unsigned int (*destination)[matrixSize]);
+                   unsigned int processes,
+                   unsigned int *originalMatrix,
+                   unsigned int *destination);
 
 int buildScatterMatrix(unsigned int matrixSize,
                        unsigned int Q,

@@ -22,10 +22,12 @@ int printMatrix(FILE *fp, unsigned int matrixSize, unsigned int *matrix) {
     for (int row = 0; row < matrixSize; row++) {
         for (int column = 0; column < matrixSize; column++) {
 
-            if (matrix[PROJECT(matrixSize, row, column)] >= INT_MAX - 2) {
+            int pos = PROJECT(matrixSize, row, column);
+
+            if (matrix[pos] >= INT_MAX - 2) {
                 fprintf(fp, "IM ");
             } else {
-                fprintf(fp, "%d ", matrix[PROJECT(matrixSize, row, column)]);
+                fprintf(fp, "%d ", matrix[pos]);
             }
 
         }

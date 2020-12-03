@@ -1,7 +1,7 @@
 #ifndef TRABALHO_1_MATRIXUTIL_H
 #define TRABALHO_1_MATRIXUTIL_H
 
-#define PROJECT(size, i, j) ((i * size) + j)
+#define PROJECT(size, i, j) (((i) * size) + j)
 
 int matrix_alloc(unsigned int size, unsigned int **matrix);
 
