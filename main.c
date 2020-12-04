@@ -19,7 +19,7 @@ int main(int argc, char **argv) {
 
     MPI_Comm_rank(MPI_COMM_WORLD, &rank);
 
-    FILE *fp = fopen("../matrix_examples/input900", "r");
+    FILE *fp = fopen("./matrix_examples/input900", "r");
 
     if (rank == 0) {
         fscanf(fp, "%d", &matrixSize);

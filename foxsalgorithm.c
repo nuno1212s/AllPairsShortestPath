@@ -12,7 +12,7 @@
 
 int verifyArguments(int processCount, int matrixSize, unsigned int *Q) {
 
-    int maxQ = floor(sqrt(processCount));
+    int maxQ = (int) (sqrt(processCount));
 
     int possibleProcCount = maxQ * maxQ;
 
@@ -98,6 +98,7 @@ int setupDatatype(MpiInfo *info, int matrixSize) {
     //Let MPI know about the new datatype
     MPI_Type_commit(&(info->datatype));
 
+    return 1;
 }
 
 
@@ -229,4 +230,6 @@ int buildScatterMatrix(unsigned int matrixSize,
         }
 
     }
+
+    return 1;
 }
