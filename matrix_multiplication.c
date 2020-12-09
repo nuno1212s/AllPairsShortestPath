@@ -46,8 +46,8 @@ int doSpecialMatrixMultiply(unsigned int matrixSize, unsigned int *matrixA,
     return 1;
 }
 
-int doAllPairsShortestPaths(unsigned int matrixSize, unsigned int *matrixW,
-                            unsigned int *matrixD) {
+int doRepeatSquaringAlgorithm(unsigned int matrixSize, unsigned int *matrixW,
+                              unsigned int *matrixD) {
 
     int m = 1;
 

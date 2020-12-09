@@ -23,14 +23,14 @@ int doSpecialMatrixMultiply(unsigned int matrixSize, unsigned int *matrixA,
                             unsigned int *matrixC);
 
 /**
- * Perform the all pairs shortest paths algorithm
+ * Perform the repeated squaring algorithm to solve the all pairs shortest path algorithm
  *
  * @param matrixSize The size of the matrix
  * @param matrixW The weight matrix, after being passed through prepareMatrix (This matrix will be modified)
  * @param matrixD The result matrix.
  * @return Whether the algorithm was successful
  */
-int doAllPairsShortestPaths(unsigned int matrixSize, unsigned int *matrixW,
-                            unsigned int *matrixD);
+int doRepeatSquaringAlgorithm(unsigned int matrixSize, unsigned int *matrixW,
+                              unsigned int *matrixD);
 
 #endif //TRABALHO_1_MATRIX_MULTIPLICATION_H

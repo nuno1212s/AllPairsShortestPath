@@ -1,6 +1,6 @@
 #include <stdio.h>
 #include <stdlib.h>
-#include "mpi/mpi.h"
+#include "mpi.h"
 #include "parser.h"
 #include "foxsalgorithm.h"
 #include "matrix_multiplication.h"
@@ -10,7 +10,9 @@
 
 int main(int argc, char **argv) {
 
-    int matrixSize, numProc = 4, rank = 0;
+    int numProc = 4, rank = 0;
+
+    unsigned int matrixSize;
     unsigned int Q;
 
     MPI_Init(&argc, &argv);
@@ -19,7 +21,7 @@ int main(int argc, char **argv) {
 
     MPI_Comm_rank(MPI_COMM_WORLD, &rank);
 
-    FILE *fp = fopen("./matrix_examples/input900", "r");
+    FILE *fp = stdin;
 
     if (rank == 0) {
         fscanf(fp, "%d", &matrixSize);
@@ -35,10 +37,12 @@ int main(int argc, char **argv) {
 
         if (!verifyArguments(numProc, matrixSize, &Q)) {
 
+            matrix_free(&dividedMatrix);
+
             MPI_Finalize();
 
             fprintf(stderr,
-                    "Failed to initialize the process. The number of processes does not match the size of the matrix.\n");;
+                    "Failed to initialize the process. The number of processes is not a perfect square or does not match the size of the matrix.\n");;
 
             printf("Number of processes: %d . Matrix size: %d .\n", numProc, matrixSize);
 
@@ -97,7 +101,7 @@ int main(int argc, char **argv) {
 
         assembleMatrix(matrixSize, Q, info.processCount, dividedMatrix, finalDestination);
 
-        FILE *resultFile = fopen("output.txt", "w");
+        FILE *resultFile = stdout;
 
         printMatrix(resultFile, matrixSize, finalDestination);
 

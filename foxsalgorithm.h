@@ -1,5 +1,5 @@
 
-#include <mpi/mpi.h>
+#include <mpi.h>
 
 struct MpiInfo_ {
     int processCount; //Total amount of processes
@@ -51,21 +51,6 @@ void performFox(int matrixSize, MpiInfo *info, unsigned int *localA,
 
 void doAllPairsShortestPathFox(int matrixSize, MpiInfo *info, unsigned int *localA,
                                unsigned int *localB, unsigned int *localC);
-
-/**
- * Subdivide the matrix and store the matrix for the process processID in the argument destinationMatrix
- *
- * @param matrixSize The size of the original matrix
- * @param matrix The original matrix
- * @param Q The Q of the problem (Sqrt of the number of processes)
- * @param processID The ID of the process we want to get the matrix for
- * @param destinationMatrix Where to put the processes matrix
- * @return
- */
-//int subdivideMatrix(unsigned int matrixSize, const unsigned int *matrix,
-//                    unsigned int Q,
-//                    unsigned int processID,
-//                    unsigned int *destinationMatrix);
 
 int assembleMatrix(unsigned int matrixSize,
                    unsigned int Q,
