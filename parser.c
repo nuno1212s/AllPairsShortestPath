@@ -19,16 +19,18 @@ int parseMatrix(FILE *fp, unsigned int matrixSize, unsigned int *matrix) {
 
 int printMatrix(FILE *fp, unsigned int matrixSize, unsigned int *matrix) {
 
-    int first = 1;
 
     for (int row = 0; row < matrixSize; row++) {
+
+        int first = 1;
         for (int column = 0; column < matrixSize; column++) {
 
             int pos = PROJECT(matrixSize, row, column);
 
             if (first) {
-                fprintf(fp, " ");
                 first = 0;
+            } else {
+                fprintf(fp, " ");
             }
 
             if (matrix[pos] >= INT_MAX - 2) {
