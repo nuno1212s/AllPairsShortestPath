@@ -37,14 +37,14 @@ int main(int argc, char **argv) {
 
         if (!verifyArguments(numProc, matrixSize, &Q)) {
 
-            matrix_free(&dividedMatrix);
-
-            MPI_Finalize();
-
             fprintf(stderr,
                     "Failed to initialize the process. The number of processes is not a perfect square or does not match the size of the matrix.\n");;
 
             printf("Number of processes: %d . Matrix size: %d .\n", numProc, matrixSize);
+
+            matrix_free(&dividedMatrix);
+
+            exit(EXIT_FAILURE);
 
             return EXIT_FAILURE;
         }
